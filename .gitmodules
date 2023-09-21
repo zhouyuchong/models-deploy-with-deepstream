@@ -1,0 +1,3 @@
+[submodule "FastestDet/FastestDet-Tensorrt"]
+	path = FastestDet/FastestDet-Tensorrt
+	url = https://github.com/zhouyuchong/FastestDet-Tensorrt.git
