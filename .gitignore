@@ -2,3 +2,5 @@
 *.png
 *.onnx
 *.engine
+*.so
+*.o
