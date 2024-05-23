@@ -4,3 +4,6 @@
 [submodule "Smoke_Fire_YoloV5/Smoke_Fire_Detection"]
 	path = Smoke_Fire_YoloV5/Smoke_Fire_Detection
 	url = https://github.com/zk2ly/Smoke_Fire_Detection.git
+[submodule "LPRNet/LPRNet_Pytorch"]
+	path = LPRNet/LPRNet_Pytorch
+	url = https://github.com/sirius-ai/LPRNet_Pytorch.git
