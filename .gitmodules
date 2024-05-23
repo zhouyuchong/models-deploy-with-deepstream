@@ -7,3 +7,6 @@
 [submodule "LPRNet/LPRNet_Pytorch"]
 	path = LPRNet/LPRNet_Pytorch
 	url = https://github.com/sirius-ai/LPRNet_Pytorch.git
+[submodule "LPD_Retina/Pytorch_Retina_License_Plate"]
+	path = LPD_Retina/Pytorch_Retina_License_Plate
+	url = https://github.com/gm19900510/Pytorch_Retina_License_Plate
