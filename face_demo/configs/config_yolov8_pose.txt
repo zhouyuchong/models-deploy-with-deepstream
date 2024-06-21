@@ -1,0 +1,25 @@
+[property]
+gpu-id=0
+net-scale-factor=0.0039215697906911373
+model-color-format=0
+num-detected-classes=80
+interval=0
+gie-unique-id=1
+process-mode=1
+network-type=100
+cluster-mode=0
+maintain-aspect-ratio=1
+output-tensor-meta=1
+symmetric-padding=1
+scaling-compute-hw=1
+
+parse-bbox-func-name=NvDsInferParseCustomYoloV5
+
+#####################NEED TO MODIFY THE CORRECT PATH##################################################
+
+# custom-lib-path=../nvdsinfer_custom_impl_Yolo/libnvdsinfer_custom_impl_Yolo.so
+model-engine-file=../models/yolov8/yolov8s-pose.engine
+#labelfile-path=/opt/models/yolov7/labels.txt
+
+[class-attrs-all]
+pre-cluster-threshold=0.25

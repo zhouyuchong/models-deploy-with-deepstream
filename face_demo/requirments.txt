@@ -1,0 +1,6 @@
+pycocotools
+numpy
+torchvision
+torch
+tqdm
+pycuda

@@ -1,0 +1,26 @@
+version: '3.5' # 或者使用你适用的Compose版本
+
+services:
+  demo:
+    container_name: demo
+    image: kbrain:6.1-dev
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    restart: always
+    devices:
+      - /dev/video0
+    environment:
+      DISPLAY: $DISPLAY
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./:/opt/nvidia/deepstream/deepstream/sources/deepstream-demo/
+    working_dir: /opt/nvidia/deepstream/deepstream/sources/deepstream-demo
+    # command: ["bash", "/opt/nvidia/deepstream/deepstream/sources/deepstream-demo/scripts/autoStart.sh"]
+    command: tail -f /dev/null
+    network_mode: host # 如果需要网络模式为host
