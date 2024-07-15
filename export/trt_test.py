@@ -3,7 +3,7 @@ Author: zhouyuchong
 Date: 2024-07-04 15:45:12
 Description: 
 LastEditors: zhouyuchong
-LastEditTime: 2024-07-15 15:57:32
+LastEditTime: 2024-07-15 16:09:49
 '''
 import os
 import sys
@@ -22,10 +22,10 @@ import numpy as np
 import tensorrt as trt
 
 from loguru import logger
-from evaluation import *
-from datasets import *
+# from evaluation import *
+# from datasets import *
 
-from utils.common import *
+from utils import *
 
 MAX_DET = 5
 
