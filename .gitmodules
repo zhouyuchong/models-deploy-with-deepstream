@@ -10,3 +10,6 @@
 [submodule "LPD_Retina/Pytorch_Retina_License_Plate"]
 	path = LPD_Retina/Pytorch_Retina_License_Plate
 	url = https://github.com/gm19900510/Pytorch_Retina_License_Plate
+[submodule "yolov10"]
+	path = yolov10
+	url = https://github.com/THU-MIG/yolov10.git
