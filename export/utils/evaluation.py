@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 from tqdm import tqdm
-from tool import *
 
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval

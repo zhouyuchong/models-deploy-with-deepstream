@@ -3,7 +3,7 @@ Author: zhouyuchong
 Date: 2024-07-04 15:45:12
 Description: 
 LastEditors: zhouyuchong
-LastEditTime: 2024-07-15 16:16:26
+LastEditTime: 2024-07-15 16:23:12
 '''
 import os
 import sys
@@ -13,7 +13,6 @@ import torch
 import glob
 import cv2
 import tqdm
-
 
 from PIL import Image
 from cuda import cuda, cudart
@@ -60,7 +59,6 @@ class TensorRTInfer:
             if self.engine.get_tensor_mode(name) == trt.TensorIOMode.INPUT:
                 is_input = True
             dtype = np.dtype(trt.nptype(self.engine.get_tensor_dtype(name)))
-            logger.debug(f"Binding {name}, dtype {dtype}, shape {self.context.get_tensor_shape(name)}")
             shape = self.context.get_tensor_shape(name)
             if is_input and shape[0] < 0:
                 assert self.engine.num_optimization_profiles > 0
@@ -335,5 +333,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    logger.debug(vars(args))
+    for key,value in vars(args).items():
+        print(key, ":", value)
     main(args)
