@@ -20,6 +20,8 @@ import ctypes
 import numpy as np
 import tensorrt as trt
 import torch
+import time
+import cv2
 import loguru
 
 from typing import Optional, List, Union
@@ -269,9 +271,95 @@ def box_iou(box1, box2, eps=1e-7):
     # IoU = inter / (area1 + area2 - inter)
     return inter / ((a2 - a1).prod(2) + (b2 - b1).prod(2) - inter + eps)
 
+def nms(boxes, scores, overlap_threshold):
+    """
+    boxes: [N, 4]，x1, y1, x2, y2
+    scores: [N,]，每个边界框的置信度
+    overlap_threshold: IOU阈值，用于判断是否重叠
+    """
+    # 获取边界框的数量
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
+    
+    # 计算每个边界框的面积
+    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    
+    # 对置信度进行排序，并获取排序后的索引
+    order = scores.argsort()[::-1]
+    
+    keep = []
+    while order.size > 0:
+        # 获取当前置信度最高的边界框的索引
+        i = order[0]
+        keep.append(i)
+        
+        # 计算当前边界框与剩下边界框的交集面积
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
+        
+        w = np.maximum(0.0, xx2 - xx1 + 1)
+        h = np.maximum(0.0, yy2 - yy1 + 1)
+        inter = w * h
+        
+        # 计算IOU
+        ovr = inter / (areas[i] + areas[order[1:]] - inter)
+        
+        # 保留IOU小于阈值的边界框
+        inds = np.where(ovr <= overlap_threshold)[0]
+        order = order[inds + 1]
+    
+    return keep
+
+
+def infer_single(model, image, netshape, imgshape, conf=0.25):
+    start_time = time.time()
+    preds = model.infer(image)[0]
+    end_time = time.time()
+    print(f"\nTime taken for inference: {end_time - start_time} seconds\n")
+    mask = preds[..., 4] > conf
+    
+    preds = [p[mask[idx]] for idx, p in enumerate(preds)]
+    preds = postprocess(preds, netshape, imgshape)
+    return preds
 
 def postprocess(preds, net_shape, img_shape):
-    x_scale = img_shape[1] / net_shape[1]
-    y_scale = img_shape[0] / net_shape[0]
-    preds = preds * torch.tensor([x_scale, y_scale, x_scale, y_scale, 1, 1]).to(preds.device)
-    return preds
+    img_height, img_width = img_shape[:2]
+    x_scale = img_width / net_shape[2]
+    y_scale = img_height / net_shape[3] 
+    p = []
+    for b in preds:
+        b[:, [0, 2]] *= x_scale
+        b[:, [1, 3]] *= y_scale
+        keep = nms(b[:, :4], b[:, 4], 0.5)
+        preds_afternms = b[keep]
+        p.append(preds_afternms)
+    return p
+
+def preprocess(input_path, netshape):
+    img = cv2.imread(input_path)
+    input_data = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    input_data = cv2.resize(input_data, (netshape[2], netshape[3]))
+    image_data = np.array(input_data) / 255.0
+    image_data = np.transpose(image_data, (2, 0, 1))  # Channel first
+    image_data = np.expand_dims(image_data, axis=0).astype(np.float32)
+    image = np.array(image_data, dtype=np.float32, order="C")
+    return image, img
+
+def draw_results(preds, image, output_path):
+    for batch in preds:
+        re = batch
+        for i in re:        
+            x1, y1, x2, y2 = i[:4]
+            conf = round(i[4], 2)
+            label = int(i[5])
+            color = tuple(np.random.randint(256, size=3))
+            color = (int(color[0]), int(color[1]), int(color[2]))
+            cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+            cv2.putText(image, str(label), (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            cv2.putText(image, str(conf), (int(x2 - 40), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    cv2.imwrite(output_path, image)
+    print(f"\noutput saved to {output_path}\n")
