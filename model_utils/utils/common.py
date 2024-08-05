@@ -315,18 +315,23 @@ def nms(boxes, scores, overlap_threshold):
     return keep
 
 
-def infer_single(model, image, netshape, imgshape, conf=0.25):
+def infer_single(model, image, netshape, imgshape, conf=0.25, model_type="yolo"):
     start_time = time.time()
     preds = model.infer(image)[0]
     end_time = time.time()
     print(f"\nTime taken for inference: {end_time - start_time} seconds\n")
-    mask = preds[..., 4] > conf
-    
-    preds = [p[mask[idx]] for idx, p in enumerate(preds)]
-    preds = postprocess(preds, netshape, imgshape)
+    if model_type == "yolo":
+        mask = preds[..., 4] > conf
+        preds = [p[mask[idx]] for idx, p in enumerate(preds)]
+        preds = postprocess_yolo(preds, netshape, imgshape)
+    elif model_type == "lpd":
+        mask = preds[..., 4] > conf
+        preds = [p[mask[idx]] for idx, p in enumerate(preds)]
+        preds = postprocess_lpd(preds, netshape, imgshape)
+
     return preds
 
-def postprocess(preds, net_shape, img_shape):
+def postprocess_yolo(preds, net_shape, img_shape):
     img_height, img_width = img_shape[:2]
     x_scale = img_width / net_shape[2]
     y_scale = img_height / net_shape[3] 
@@ -339,6 +344,31 @@ def postprocess(preds, net_shape, img_shape):
         p.append(preds_afternms)
     return p
 
+def postprocess_lpd(preds, net_shape, img_shape):
+    img_height, img_width = img_shape[:2]
+    x_scale = img_width / net_shape[2]
+    y_scale = img_height / net_shape[3] 
+    p = []
+    for b in preds:
+        # rescale bbox & landmarks
+        b[:, [0, 2]] *= x_scale
+        b[:, [1, 3]] *= y_scale
+        b[:, [5, 7, 9, 11]] *= x_scale
+        b[:, [6, 8, 10, 12]] *= y_scale
+        # true confidence
+        b[:, [13]] = np.maximum(b[:, [13]], b[:, [14]])
+        b[:, [4]] = b[:, [4]] * b[:, [13]]
+        # cx,cy,w,h to x1,y1,x2,y2
+        b[:, [0]] = b[:, [0]] - b[:, [2]] / 2
+        b[:, [1]] = b[:, [1]] - b[:, [3]] / 2
+        b[:, [2]] = b[:, [0]] + b[:, [2]]
+        b[:, [3]] = b[:, [1]] + b[:, [3]]
+        keep = nms(b[:, :4], b[:, 4], 0.5)
+        preds_afternms = b[keep]
+        p.append(preds_afternms)
+    return p
+        
+
 def preprocess(input_path, netshape):
     img = cv2.imread(input_path)
     input_data = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -349,17 +379,29 @@ def preprocess(input_path, netshape):
     image = np.array(image_data, dtype=np.float32, order="C")
     return image, img
 
-def draw_results(preds, image, output_path):
+def draw_results(preds, image, output_path, model_type):
     for batch in preds:
         re = batch
         for i in re:        
             x1, y1, x2, y2 = i[:4]
             conf = round(i[4], 2)
-            label = int(i[5])
+            
             color = tuple(np.random.randint(256, size=3))
             color = (int(color[0]), int(color[1]), int(color[2]))
             cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
-            cv2.putText(image, str(label), (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
             cv2.putText(image, str(conf), (int(x2 - 40), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            if model_type == "yolo":
+                label = int(i[5])
+                cv2.putText(image, str(label), (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            elif model_type == "lpd":
+                for j in range(4):
+                    center_coordinates = (int(i[5+j*2]), int(i[6+j*2]))
+                    radius = 10
+                    thickness = -1
+                    color = tuple(np.random.randint(256, size=3))
+                    color = (int(color[0]), int(color[1]), int(color[2]))
+                    cv2.circle(image, center_coordinates, radius, color, thickness)
+                    
     cv2.imwrite(output_path, image)
     print(f"\noutput saved to {output_path}\n")

@@ -146,8 +146,19 @@ def main(args):
             trt_infer = TensorRTInfer(engine_path=args.engine, mode='min')
             spec = trt_infer.input_spec()
             input_data, ori_image = preprocess(args.input, spec[0])
-            preds = infer_single(model=trt_infer, image=input_data, netshape=spec[0], imgshape=ori_image.shape, conf=args.conf, )
-            draw_results(preds, ori_image, args.input.replace('.jpg', '_output.jpg'))
+            preds = infer_single(model=trt_infer, image=input_data, netshape=spec[0], imgshape=ori_image.shape, conf=args.conf, model_type=args.type)
+            output_path = args.input.replace('.jpg', '_re.jpg') if args.input.endswith('.jpg') else args.input.replace('.png', '_re.png')
+            draw_results(preds, ori_image, output_path=output_path, model_type=args.type)
+        elif is_file_or_folder(args.input) == 2 and not args.val:
+            print("\nBatch image inference\n")
+            trt_infer = TensorRTInfer(engine_path=args.engine, mode='min')
+            spec = trt_infer.input_spec()
+            for file in os.listdir(args.input):
+                if file.endswith('.jpg') or file.endswith('.png'):
+                    input_data, ori_image = preprocess(os.path.join(args.input, file), spec[0])
+                    preds = infer_single(model=trt_infer, image=input_data, netshape=spec[0], imgshape=ori_image.shape, conf=args.conf, model_type=args.type)
+                    output_path = file.replace('.jpg', '_re.jpg') if file.endswith('.jpg') else file.replace('.png', '_re.png')
+                    draw_results(preds, ori_image, output_path=os.path.join(args.input, output_path))
         elif is_file_or_folder(args.input) == 2 and args.val:
             print("\nValidation mode\n")
             trt_infer = TensorRTInfer(engine_path=args.engine, mode='min')
@@ -194,6 +205,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-i", "--input", default=None, help="Path to the image or directory to process"
+    )
+    parser.add_argument(
+        "-t", "--type", default=None, help="model post process type"
     )
     parser.add_argument(
         "-v",
